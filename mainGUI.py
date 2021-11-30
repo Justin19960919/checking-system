@@ -10,13 +10,8 @@ from tkinter import ttk
 from tkinter.filedialog import askopenfilename
 from tkinter.messagebox import showinfo
 
-
 # Matching class
 from match import Match
-
-
-
-#import threading
 import logging
 
 

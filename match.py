@@ -1,43 +1,15 @@
-# def setUpFolders(self):
-		
-	# 	logging.info(f"建立 {self.cur_time} 的資料夾")
-		
-
-	# 	# make folder with current date as name
-	# 	os.mkdir(self.cur_time)
-	# 	# make subfolders
-	# 	os.chdir(self.cur_time)
-	# 	os.mkdir("cathay")
-	# 	os.mkdir("711")
-	# 	os.mkdir("paypal")
-	# 	os.mkdir("linepay")
-		
-	# 	# return back to root
-	# 	os.chdir("../")
-
-# dependencies
-# openpyxl
-# pandas
-# logging
-# os
-# datetime
-
 from datetime import datetime
 import pandas as pd 
 import numpy as np 
 import logging
 import os
 
-
 '''
-
 A Matching class that matches checking file 
 with other files based on different criterias
- 
 '''
 
 class Match:
-	# class variables
 	cur_time = str(datetime.now().date())
 
 	def __init__(self, checkingFile):
@@ -192,23 +164,22 @@ class Match:
 		paypal = paypal[paypal['類型'] == "快速結帳付款"]
 		paypal['paypal_交易序號'] = paypal['主旨'].apply(lambda x: x.split("-")[1].strip())
 
-
 		# log
 		logging.info(f"pay pal檔 總共有 {paypal.shape[0]} 行")
 		print("Done..")
 
 		self.paypal = paypal
-	
-
 
 	def readLinePay(self):
-		pass
+	        pass
 
+	def matchProcess(self, mergedDf, df1_col, df2_col, df1_money, df2_money):
+		fullyMatched = mergedDf[mergedDf[df1_col].notna() & mergedDf[df2_col].notna() & mergedDf[df1_money] == mergedDf[df2_money]]
+		moneyUnMatched = mergedDf[mergedDf[df1_col].notna() & mergedDf[df2_col].notna() & mergedDf[df1_money] != mergedDf[df2_money]]
+		df1UnMatched = mergedDf[mergedDf[df1_col].notna() & mergedDf[df2_col].isna()]
+		df2UnMatched = mergedDf[mergedDf[df1_col].isna() & mergedDf[df2_col].notna()]
+		return fullyMatched, moneyUnMatched, df1UnMatched, df2UnMatched
 
-
-
-	#########################################################
-	
 	################### Match up files ######################
 
 	def matchCashFlow_cathay(self):
@@ -230,26 +201,29 @@ class Match:
 
 		
 		# MERGING cashflow file and cathay file ...
-		logging.info("Merging cashFlow_cathay and cathay files")
 		cashFlow_cathay_merged = cashFlow_cathay.merge(self.cathay, left_on = "cash_id", right_on = "訂單編號", how = "outer")
+                
+		### matching ###
 
-		## get cashflow unmatch in merge
-		cashFlow_cathay_merged_cashflowUnmatch = cashFlow_cathay_merged[cashFlow_cathay_merged['cash_id'].isna() & cashFlow_cathay_merged['訂單編號'].notna()]
-		logging.info(f"對帳單 - 國泰: 對帳單 這邊沒對到的有 {cashFlow_cathay_merged_cashflowUnmatch.shape[0]} 筆")
-		self.exportExcel(cashFlow_cathay_merged_cashflowUnmatch, "cashFlowUnmatch_cathay")
-
-		cashFlow_cathay_merged_cathayUnmatch = cashFlow_cathay_merged[cashFlow_cathay_merged['cash_id'].notna() & cashFlow_cathay_merged['訂單編號'].isna()]
-		logging.info(f"對帳單 - 國泰: 國泰 這邊沒對到的有 {cashFlow_cathay_merged_cathayUnmatch.shape[0]} 筆")
-		self.exportExcel(cashFlow_cathay_merged_cathayUnmatch, "cathayUnmatch_cathay")
-
-		cashFlow_cathay_merged_moneyUnmatch = cashFlow_cathay_merged[cashFlow_cathay_merged['cash_id'].notna() & cashFlow_cathay_merged['訂單編號'].notna() & (cashFlow_cathay_merged['請/退款金額'] != cashFlow_cathay_merged['交易金額'])]
-		logging.info(f"對帳單 - 國泰: 金流 沒對到的有 {cashFlow_cathay_merged_moneyUnmatch.shape[0]} 筆")
-		self.exportExcel(cashFlow_cathay_merged_moneyUnmatch, "cashFlow_cathay_moneyUnmatch")
+		fullyMatched, moneyUnMatched, cathayUnMatched, cashflowUnMatched = self.matchProcess(cashFlow_cathay_merged, "訂單編號", "cash_id", "請/退款金額", "交易金額")
+		# number of entries
+		logging.info(f"總共{cashFlow_cathay_merged.shape[0]} 筆")			
+		
+		# logging and export
+		logging.info(f"對帳單 - 國泰: 全部對到的有 {fullyMatched.shape[0]} 筆")
+		self.exportExcel(fullyMatched, "fullyMatched")
+		
+		logging.info(f"對帳單 - 國泰: 金流沒對到的有 {moneyUnMatched.shape[0]} 筆")
+		self.exportExcel(moneyUnMatched, "moneyUnMatched")
+		
+		logging.info(f"對帳單 - 國泰: 國泰沒有對到的有 {cathayUnMatched.shape[0]} 筆")
+		self.exportExcel(cathayUnMatched, "cathayUnMatched")
+		
+		logging.info(f"對帳單 - 國泰: 對帳單沒對到的有 {cashflowUnMatched.shape[0]} 筆")
+		self.exportExcel(cashflowUnMatched, "cashflowUnMatched")
+		
 
 		logging.info("--------- Finished cashflow / cathay matching ---------")
-		# get cathay unmatch in merge
-
-
 		# change back to root (go up two levels)
 		os.chdir("../../")
 
@@ -271,27 +245,25 @@ class Match:
 		# MERGE (outer merge of 711 file and cashflow)
 		cashFlow_711_merged = cashFlow_711.merge(self.file711, left_on = "出貨單號", right_on = "配送編號", how = "outer")
 
-		logging.info(f"After merging of cashflow and 711 file, we have {cashFlow_711_merged.shape[0]} rows in table")
-
-
-
-		###
-		cashFlow_711_cashFlowUnMatched = cashFlow_711_merged[cashFlow_711_merged['出貨單號'].isna()]
-		logging.info(f"對帳單 - 7-11: 對帳單 這邊沒對到的有 {cashFlow_711_cashFlowUnMatched.shape[0]} 筆")
-		self.exportExcel(cashFlow_711_cashFlowUnMatched, "cashFlow_711_cashFlowUnMatched")
-		###
-
-		###
-		cashFlow_711_711UnMatched = cashFlow_711_merged[cashFlow_711_merged['配送編號'].isna()]
-		logging.info(f"對帳單 - 7-11: 7-11 這邊沒對到的有 {cashFlow_711_711UnMatched.shape[0]} 筆")
-		self.exportExcel(cashFlow_711_711UnMatched, "cashFlow_711_711UnMatched")
-		###
-
-		###
-		cashFlow_711_moneyUnMatched = cashFlow_711_merged[cashFlow_711_merged['配送編號'].notna() &cashFlow_711_merged['出貨單號'].notna() & (cashFlow_711_merged["交易金額"] != cashFlow_711_merged["配送金額"])]
-		logging.info(f"對帳單 - 7-11:  金流 沒對到的有 {cashFlow_711_moneyUnMatched.shape[0]} 筆")
-		self.exportExcel(cashFlow_711_moneyUnMatched, "cashFlow_711_moneyUnMatched")
-		###
+	
+		### matching ###
+		fullyMatched, moneyUnMatched, sevenElevenUnMatched, cashflowUnMatched = self.matchProcess(cashFlow_711_merged, "配送編號", "出貨單號", "交易金額", "配送金額")
+		
+		# number of entries
+		logging.info(f"總共{cashFlow_711_merged.shape[0]} 筆")	
+		
+		# logging and export
+		logging.info(f"對帳單 - 7-11: 全部對到的有 {fullyMatched.shape[0]} 筆")
+		self.exportExcel(fullyMatched, "fullyMatched")
+							
+		logging.info(f"對帳單 - 7-11: 金流沒對到的有 {moneyUnMatched.shape[0]} 筆")
+		self.exportExcel(moneyUnMatched, "moneyUnMatched")
+							
+		logging.info(f"對帳單 - 7-11: 7-11沒有對到的有 {sevenElevenUnMatched.shape[0]} 筆")
+		self.exportExcel(sevenElevenUnMatched, "seven_eleven_UnMatched")
+							
+		logging.info(f"對帳單 - 7-11: 對帳單沒對到的有 {cashflowUnMatched.shape[0]} 筆")
+		self.exportExcel(cashflowUnMatched, "cashflowUnMatched")
 
 		logging.info("--------- Finished cashflow / 711 matching ---------")
 
@@ -314,27 +286,35 @@ class Match:
 		# merge cashflow with paypal file
 		cashFlow_paypal_merged = cashFlow_paypal.merge(self.paypal, left_on = "交易序號", right_on = "paypal_交易序號", how = "outer")
 
+
+		# number of entries
+		logging.info(f"總共{cashFlow_paypal_merged.shape[0]} 筆")	
+
 		# cashflow not matched
 		cashFlow_paypal_cashFlow_unmatch = cashFlow_paypal_merged[cashFlow_paypal_merged['交易序號'].isna()]
 		logging.info(f"對帳單 - paypal: 對帳單 這邊沒對到的有  {cashFlow_paypal_cashFlow_unmatch.shape[0]} 筆")
-		self.exportExcel(cashFlow_paypal_cashFlow_unmatch, "cashFlow_paypal_cashFlow_unmatch")
+		self.exportExcel(cashFlow_paypal_cashFlow_unmatch, "cashFlow_unmatch")
 
 		# paypal not matched
 		cashFlow_paypal_paypal_unmatch = cashFlow_paypal_merged[cashFlow_paypal_merged['paypal_交易序號'].isna(
 			)]
 		logging.info(f"對帳單 - paypal: paypal 這邊沒對到的有  {cashFlow_paypal_paypal_unmatch.shape[0]} 筆")
-		self.exportExcel(cashFlow_paypal_paypal_unmatch, "cashFlow_paypal_paypal_unmatch")
+		self.exportExcel(cashFlow_paypal_paypal_unmatch, "paypal_unmatch")
 
 
 		# both match
 		cashFlow_paypal_match = cashFlow_paypal_merged[cashFlow_paypal_merged['交易序號'].notna() & cashFlow_paypal_merged['paypal_交易序號'].notna()]
-
 		cashFlow_paypal_match["總額"] = cashFlow_paypal_match["總額"].apply(lambda x: float(str(x).replace(",","")))
+		
 		# get money unmatched in matched records
 		cashFlow_paypal_match_moneyUnmatch = cashFlow_paypal_match[cashFlow_paypal_match['交易金額'] != cashFlow_paypal_match['總額']]
-		
 		logging.info(f"對帳單 - paypal: 金流 沒對到的有  {cashFlow_paypal_match_moneyUnmatch.shape[0]} 筆")
-		self.exportExcel(cashFlow_paypal_match_moneyUnmatch, "cashFlow_paypal_match_moneyUnmatch")
+		self.exportExcel(cashFlow_paypal_match_moneyUnmatch, "moneyUnmatch")
+
+		# money matched
+		cashFlow_paypal_moneyMatch = cashFlow_paypal_match[cashFlow_paypal_match['交易金額'] == cashFlow_paypal_match['總額']]
+		logging.info(f"對帳單 - paypal: 金流 對到的有  {cashFlow_paypal_moneyMatch.shape[0]} 筆")
+		self.exportExcel(cashFlow_paypal_moneyMatch, "moneyMatch")
 
 		logging.info("--------- Finished cashflow / paypal matching ---------")
 	
