@@ -11,6 +11,8 @@ from tkinter.filedialog import askopenfilename
 from tkinter.messagebox import showinfo
 
 # Matching class
+from process import Process
+from read import Read
 from match import Match
 import logging
 
@@ -54,6 +56,7 @@ class GUI(tk.Tk):
         self.createUploadField("711USHOP1", 2, "xlsx")
         self.createUploadField("711USHOP2", 3, "xlsx")
         self.createUploadField("paypal", 4, "csv")
+        self.createUploadField("linepay", 5, "xlsx")
 
 
     def constructProgressBar(self):
@@ -77,7 +80,7 @@ class GUI(tk.Tk):
     ### UTILITY FUNCTIONS ###
     def select_file(self, fileCategory, uploadStatus):
         # only allow uploads of excel files and csv files
-        allowedFileTypes = [('excel file', '*.xlsx'), ('csv file', '*.csv')]
+        allowedFileTypes = [('.xlsx file', '*.xlsx'), ('.csv file', '*.csv'), ('.xls file', "*.xls")]
         fileName = askopenfilename(title="select a file", filetypes= allowedFileTypes)
 
         if fileName:
@@ -98,9 +101,9 @@ class GUI(tk.Tk):
             "cashflow": "銷貨明細表",
             "cathay": "國泰世華對帳單",
             "711USHOP1": "統一速網 - AROO",
-            "711USHOP2": "統一宿網 - ROVOLETA",
-            "paypal": "PayPal"
-            # Linepay
+            "711USHOP2": "統一速網 - ROVOLETA",
+            "paypal": "PayPal",
+            "linepay": "LINE PAY"
         }
 
         uploadStatus = tk.StringVar()
@@ -154,36 +157,71 @@ class GUI(tk.Tk):
         USHOP711_1 = "711USHOP1"
         USHOP711_2 = "711USHOP2"
         PAYPAL = "paypal"
-        uploadCount = 0
+        LINEPAY = "linepay"
+        
+        uploads = {}
 
+        uploadCount = 0
         if CASHFLOW not in self.uploadedFiles.keys():
             logging.exception(f"{CASHFLOW} file not uploaded .. abort")
             print(f"{CASHFLOW} file not uploaded .. abort")
             return 
 
-        # Once we are sure the user uploads a cashflow file, we init the Match object
-        m = Match(self.uploadedFiles[CASHFLOW])
+        # read in cashflow file
+        cashFlow, cashFlow_USHOP = Read.readInCashFlow(self.uploadedFiles[CASHFLOW])
+        uploads["cashFlow"] = cashFlow
+        uploads["cashFlow_USHOP"] = cashFlow_USHOP
         
+        # start the whole process
+        Process.start()
+        Process.setupDateFolder()
+
+        ######### Four different kind of files #########
+        # cathay
         if CATHAY in self.uploadedFiles.keys():
-            m.readCathay(self.uploadedFiles[CATHAY])
-            m.matchCashFlow_cathay()        
+            cathay = Read.readCathay(self.uploadedFiles[CATHAY])
+            # do matching
             uploadCount += 1
+            Process.setUpSubfolder("國泰世華銀行")
+            uploads["國泰世華銀行"] = cathay
 
+
+        # 7-11
         if USHOP711_1 in self.uploadedFiles.keys() and USHOP711_2 in self.uploadedFiles.keys():
-            m.read711(self.uploadedFiles[USHOP711_1], self.uploadedFiles[USHOP711_2])
-            m.matchCashFlow_711()
-            uploadCount += 2
-
-        if PAYPAL in self.uploadedFiles.keys():
-            m.readPayPal(self.uploadedFiles[PAYPAL])
-            m.matchCashFlow_paypal()
+            file711 = Read.read711(self.uploadedFiles[USHOP711_1], self.uploadedFiles[USHOP711_2])
+            # do matching
             uploadCount += 1
+            Process.setUpSubfolder("7-11")
+            uploads["7-11"] = file711
+
+        # paypal
+        if PAYPAL in self.uploadedFiles.keys():
+            paypal = Read.readPayPal(self.uploadedFiles[PAYPAL])
+            # do matching
+            uploadCount += 1
+            Process.setUpSubfolder("Paypal")
+            uploads["Paypal"] = paypal
+
+
+        # linepay
+        if LINEPAY in self.uploadedFiles.keys():
+            linePay = Read.readPayPal(self.uploadedFiles[LINEPAY])
+            # do matching
+            uploadCount += 1
+            Process.setUpSubfolder("Line-Pay")
+            uploads["Line-Pay"] = linePay
+
 
         # if only cashflow file is uploaded, and submit starts, then there is nothing to match, abort.
         if uploadCount == 0:
             print("There is nothing to match ...")
             return  
         
+        #### start matching ####
+        # uploads dictionary of uploaded files
+
+        match = Match(uploads)
+        match.match()
         # if all goes well
         self.matchingStatus = True
 
