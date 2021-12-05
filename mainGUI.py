@@ -167,19 +167,24 @@ class GUI(tk.Tk):
             print(f"{CASHFLOW} file not uploaded .. abort")
             return 
 
+        # initiate read file class functionality
+        readFiles = Read()
+
         # read in cashflow file
-        cashFlow, cashFlow_USHOP = Read.readInCashFlow(self.uploadedFiles[CASHFLOW])
+        cashFlow, cashFlow_USHOP = readFiles.readInCashFlow(self.uploadedFiles[CASHFLOW])
         uploads["cashFlow"] = cashFlow
         uploads["cashFlow_USHOP"] = cashFlow_USHOP
         
         # start the whole process
         Process.start()
-        Process.setupDateFolder()
+        Process.setUpDateFolder()
+
+        
 
         ######### Four different kind of files #########
         # cathay
         if CATHAY in self.uploadedFiles.keys():
-            cathay = Read.readCathay(self.uploadedFiles[CATHAY])
+            cathay = readFiles.readCathay(self.uploadedFiles[CATHAY])
             # do matching
             uploadCount += 1
             Process.setUpSubfolder("國泰世華銀行")
@@ -188,7 +193,7 @@ class GUI(tk.Tk):
 
         # 7-11
         if USHOP711_1 in self.uploadedFiles.keys() and USHOP711_2 in self.uploadedFiles.keys():
-            file711 = Read.read711(self.uploadedFiles[USHOP711_1], self.uploadedFiles[USHOP711_2])
+            file711 = readFiles.read711(self.uploadedFiles[USHOP711_1], self.uploadedFiles[USHOP711_2])
             # do matching
             uploadCount += 1
             Process.setUpSubfolder("7-11")
@@ -196,7 +201,7 @@ class GUI(tk.Tk):
 
         # paypal
         if PAYPAL in self.uploadedFiles.keys():
-            paypal = Read.readPayPal(self.uploadedFiles[PAYPAL])
+            paypal = readFiles.readPayPal(self.uploadedFiles[PAYPAL])
             # do matching
             uploadCount += 1
             Process.setUpSubfolder("Paypal")
@@ -205,7 +210,7 @@ class GUI(tk.Tk):
 
         # linepay
         if LINEPAY in self.uploadedFiles.keys():
-            linePay = Read.readPayPal(self.uploadedFiles[LINEPAY])
+            linePay = readFiles.readLinePay(self.uploadedFiles[LINEPAY])
             # do matching
             uploadCount += 1
             Process.setUpSubfolder("Line-Pay")
@@ -228,13 +233,15 @@ class GUI(tk.Tk):
 
     # Multithreading to run progress bar and matching at the same time
     def process(self):
-        print("Starting progress bar ...") 
-        self.startProgressBar()
         print("Starting matching process ...")
         self.match()
+        
+        print("Starting progress bar ...") 
+        self.startProgressBar()
+        
         print("Matching status: ", self.matchingStatus)
         self.checkExecution()
-
+        
 # Main
 app = GUI()
 app.mainloop()
