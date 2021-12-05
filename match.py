@@ -105,7 +105,7 @@ class Match:
 		os.chdir("../../")
 
 
-	def matchCashFlow_paypal(self, filename,, paypal):
+	def matchCashFlow_paypal(self, filename, paypal):
 		os.chdir(f"{self.cur_time}/{filename}")
 
 		logging.info("-------------- Starting matching of cashflow and paypal file ----------------")
