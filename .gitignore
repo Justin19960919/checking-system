@@ -1,2 +1,5 @@
+.DS_store
+app.log
 files
 test.ipynb
+.ipynb_checkpoints
