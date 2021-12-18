@@ -43,15 +43,14 @@ class Read:
 		##################################
 		
 		logging.info("讀入 對帳單 檔案...")
-		acceptedFileTypes = {"xlsx", "xls"}
+		acceptedFileTypes = {"xlsx"}
 
 		if not self.fileTypeCheck(checkingFile, acceptedFileTypes):
 			logging.error(f"{checkingFile} 不是 {acceptedFileTypes} 檔，請更換!")
 			raise Exception(f"{checkingFile} 不是 {acceptedFileTypes} 檔, 請使用 {acceptedFileTypes}檔")
 
-		# Read in and initiate the checking file	
-		cashFlow = pd.read_excel(checkingFile) 
-
+		# Read in and initiate the checking file
+		cashFlow = pd.read_excel(checkingFile, engine="openpyxl")
 		# Check columns
 		if not self.checkColumns(cashflow_reserve_columns, cashFlow):
 			raise Exception("對帳單檔案裡面沒有相對應欄位來進行對帳..")
@@ -74,7 +73,7 @@ class Read:
     Returns:
         cleaned cathay file
 	'''	
-	def readCathay(self, cathayFile):
+	def readCathay(self, cathayFileRoute):
 		########## CONSTANTS ############
 		cathay_reserve_columns = ['訂單編號', '訂單時間', '請/退款金額']
 		##################################
@@ -82,13 +81,12 @@ class Read:
 
 		logging.info(f"讀入 國泰檔案... ")
 		
-		if not self.fileTypeCheck(cathayFile, acceptedFileTypes):
-			logging.error(f"{cathayFile} 不是 {acceptedFileTypes} 檔，請更換!")
-			raise Exception(f"{cathayFile} 不是{acceptedFileTypes} 檔, 請使用 excel 檔")
+		if not self.fileTypeCheck(cathayFileRoute, acceptedFileTypes):
+			logging.error(f"{cathayFileRoute} 不是 {acceptedFileTypes} 檔，請更換!")
+			raise Exception(f"{cathayFileRoute} 不是{acceptedFileTypes} 檔, 請使用 excel 檔")
 		
 		# read in file
-		cathay = pd.read_excel(cathayFile)
-
+		cathay = pd.read_excel(cathayFileRoute, engine="openpyxl")
 		# Check columns
 		if not self.checkColumns(cathay_reserve_columns, cathay):
 			raise Exception("國泰 檔案裡面沒有相對應欄位來進行對帳..")
@@ -123,11 +121,9 @@ class Read:
 			raise Exception(f"{file711_1} or {file711_2} 不是 {acceptedFileTypes} 檔 , 請更換")
 
 		# read in 711 first file
-		file711_1 = pd.read_excel(file711_1) 
-
+		file711_1 = pd.read_excel(file711_1, engine = "openpyxl") 
 		# read in 711 second file
-		file711_2 = pd.read_excel(file711_2) 	
-
+		file711_2 = pd.read_excel(file711_2, engine = "openpyxl") 	
 		file711 = pd.concat([file711_1, file711_2], axis = 0)
 
 		# check if required columns are inside
@@ -179,16 +175,16 @@ class Read:
     Returns:
         cleaned line pay pandas df
 	'''	
-	def readLinePay(self, linePay):
-		acceptedFileTypes = {"xlsx", "xls"}
+	def readLinePay(self, linePayRoute):
+		acceptedFileTypes = {"xlsx"}
 		linepay_reserved_columns = ['訂單號碼', "付款金額"]
 		logging.info("讀入linepay 檔")
 		# check
-		if not self.fileTypeCheck(linePay, acceptedFileTypes):
-			logging.error(f"{linePay} 不是 {acceptedFileTypes} 檔")
-			raise Exception(f"{linePay} 不是 {acceptedFileTypes} 檔, use {acceptedFileTypes} 檔")
+		if not self.fileTypeCheck(linePayRoute, acceptedFileTypes):
+			logging.error(f"{linePayRoute} 不是 {acceptedFileTypes} 檔")
+			raise Exception(f"{linePayRoute} 不是 {acceptedFileTypes} 檔, use {acceptedFileTypes} 檔")
 		
-		linePay = pd.read_excel(linePay)
+		linePay = pd.read_excel(linePayRoute, engine="openpyxl")                
 		if not self.checkColumns(linepay_reserved_columns, linePay):
 			raise Exception("LinePay 檔案裡面沒有相對應欄位來進行對帳..")
 		

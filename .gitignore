@@ -3,3 +3,8 @@ app.log
 files
 test.ipynb
 .ipynb_checkpoints
+dist
+build
+env
+app.spec
+
